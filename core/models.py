@@ -281,16 +281,19 @@ def get_res_unet_model(input_shape=(256, 192, 3), output_channels: int=3):
     encoder2_res = conv(encoder2, 64) # 128 x 96 x 64
     cat2 = tf.concat([encoder2, encoder2_res], axis=-1)
     pool2 = max_pool(cat2) # 64 x 48 x 64
-    
+    pool2 = dropout(pool2)
+
     encoder3 = conv(pool2, 128) # 128 x 96 x 64
     encoder3_res = conv(encoder3, 128) # 128 x 96 x 64
     cat3 = tf.concat([encoder3, encoder3_res], axis=-1)
     pool3 = max_pool(cat3) # 64 x 48 x 64
+    pool3 = dropout(pool3)
 
     encoder4 = conv(pool3, 256) # 128 x 96 x 64
     encoder4_res = conv(encoder4, 256) # 128 x 96 x 64
     cat4 = tf.concat([encoder4, encoder4_res], axis=-1)
     pool4 = max_pool(cat4) # 64 x 48 x 64
+    pool4 = dropout(pool4)
 
     encoder5 = conv(pool4, 512) # 128 x 96 x 64
     encoder5_res = conv(encoder5, 512) # 128 x 96 x 64
@@ -311,18 +314,21 @@ def get_res_unet_model(input_shape=(256, 192, 3), output_channels: int=3):
     # cat1_tensor = tf.keras.layers.concatenate([up1_tensor, encoder5]) # 16 x 12 x 512
     bottleneck = conv(out_encoder, 1024)
     up2_tensor = pix2pix.upsample(256, 4)(bottleneck)  # 32 x 24 x 256
+    up2_tensor = dropout(up2_tensor)
 
-    cat2_tensor = tf.keras.layers.concatenate([up2_tensor, res_encoder4])  # 32 x 24 x 256
+    cat2_tensor = tf.keras.layers.concatenate([up2_tensor, encoder4_res])  # 32 x 24 x 256
     cat2_tensor = conv(cat2_tensor, 512)
     
     up3_tensor = pix2pix.upsample(128, 4)(cat2_tensor)  # 64 x 48 x 128
+    up3_tensor = dropout(up3_tensor)
 
-    cat3_tensor = tf.keras.layers.concatenate([up3_tensor, res_encoder3]) # 64 x 48 x 128
+    cat3_tensor = tf.keras.layers.concatenate([up3_tensor, encoder3_res]) # 64 x 48 x 128
     cat3_tensor = conv(cat3_tensor, 256)
 
     up4_tensor = pix2pix.upsample(64, 4)(cat3_tensor) # 128 x 96 x 64
+    up4_tensor = dropout(up4_tensor)
 
-    cat4_tensor = tf.keras.layers.concatenate([up4_tensor, res_encoder2]) # 128 x 96 x 64
+    cat4_tensor = tf.keras.layers.concatenate([up4_tensor, encoder2_res]) # 128 x 96 x 64
     cat4_tensor = conv(cat4_tensor, 128)
     
     # up5_tensor = pix2pix.upsample(32, 4)(cat4_tensor) 
@@ -331,7 +337,7 @@ def get_res_unet_model(input_shape=(256, 192, 3), output_channels: int=3):
 
     outputs = deconv(cat4_tensor, 32)
     outputs = conv(outputs, 32)
-    outputs = final_conv(outputs, 3)
+    outputs = conv(outputs, 3, 'tanh')
     # out2 = final_conv(out2, 1)
 
     model = tf.keras.Model(

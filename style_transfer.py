@@ -58,10 +58,10 @@ it = iter(train_ds)
 sample_input, sample_output = next(it)
 print(f"Sample input shape: {sample_input.shape}")
 print(f"input's range value: [{tf.reduce_min(sample_input)}, {tf.reduce_max(sample_input)}]")
-show_img(sample_input)
+show_img(deprocess_img(sample_input))
 print(f"Sample output shape: {sample_output.shape}")
 print(f"output's range value: [{tf.reduce_min(sample_output)}, {tf.reduce_max(sample_output)}]")
-show_img(sample_output)
+show_img(deprocess_img(sample_output))
 
 
 # %%
@@ -79,7 +79,6 @@ model.summary()
 # %%
 
 # Loss operation
-
 vgg19 = tf.keras.applications.VGG19(
     include_top=False, 
     weights='imagenet',
@@ -105,9 +104,16 @@ def loss_function(real, pred):
     # compute perceptual loss
     content_loss = compute_mse_loss(real, pred)
 
+    # preprocessed_real = tf.keras.applications.vgg19.preprocess_input(real * 255.0)
+    # preprocessed_pred = tf.keras.applications.vgg19.preprocess_input(pred * 255.0)
+
+    # Convert RGB to BGR
+    bgr_real = real[..., ::-1]
+    bgr_pred = pred[..., ::-1]
+
     # compute perceptual loss
-    out_pred = wrap_vgg19_model(pred, training=False)
-    out_real = wrap_vgg19_model(real, training=False)
+    out_pred = wrap_vgg19_model(bgr_pred, training=False)
+    out_real = wrap_vgg19_model(bgr_real, training=False)
 
     p1 = compute_mse_loss(out_real[0], out_pred[0]) / 5.3 * 2.5
     p2 = compute_mse_loss(out_real[1], out_pred[1]) / 2.7  / 1.2
@@ -121,9 +127,9 @@ def loss_function(real, pred):
 
 # %%
 
-checkpoint_path = "models/checkpoints/plos.ckpt"
+checkpoint_path = "models/checkpoints/plos3.ckpt"
 # checkpoint_dir = os.path.dirname(checkpoint_path)
-if os.path.exists("models/checkpoints/plos.ckpt.index"):
+if os.path.exists("models/checkpoints/plos3.ckpt.index"):
     model.load_weights(checkpoint_path)
     print("Weights loaded!")
 
@@ -141,9 +147,9 @@ with tf.device('/device:CPU:0'):
                 # print(f"Output batch shape : {output_batch.shape}")
                 r = random.randint(0, BATCH_SIZE - 1)
                 print("Sample Input:")
-                show_img(input_batch[r])
+                show_img(deprocess_img(input_batch[r]))
                 print("Sample Prediction:")
-                show_img(pred_batch[r])
+                show_img(deprocess_img(pred_batch[r]))
 
                 # Compute loss
                 loss = loss_function(output_batch, pred_batch)

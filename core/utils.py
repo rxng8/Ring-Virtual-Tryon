@@ -61,6 +61,11 @@ def conv(batch_input, out_channels, strides=1, activation='relu'):
     # print(out.shape)
     return out
 
+def dropout(batch_input, rate=0.5):
+    return tf.keras.layers.Dropout(
+        rate
+    ) (batch_input)
+
 def max_pool(batch_input):
     return tf.keras.layers.MaxPooling2D(
         pool_size=(2, 2),
@@ -101,12 +106,19 @@ def create_mask(pred_mask):
     return pred_mask
 
 def preprocess_image(img: np.ndarray, shape=(256, 192)) -> tf.Tensor:
+    # Expect range 0 - 255
     rescaled = tf.cast(img, dtype=float) / 255.0
+    rescaled = (rescaled - 0.5) * 2 # range [-1, 1]
+    
     return tf.image.resize(
         rescaled, 
         shape, 
         # method=tf.image.ResizeMethod.NEAREST_NEIGHBOR
     )
+
+def deprocess_img(img):
+    # Expect img range [-1, 1]
+    return img / 2.0 + 0.5
 
 def show_img(img):
     if len(img.shape) == 3:
